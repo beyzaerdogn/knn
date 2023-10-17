@@ -1,0 +1,46 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.model_selection import GridSearchCV
+
+# Veri setini yükleyin
+df = pd.read_csv('/home/bb_yapayzeka/train.csv')
+
+# Eksik değerleri doldurun
+mean = df['Item_Weight'].mean()
+df['Item_Weight'].fillna(mean, inplace=True)
+
+mode = df['Outlet_Size'].mode()[0]
+df['Outlet_Size'].fillna(mode, inplace=True)
+
+# Özellikleri ve hedef değişkeni ayırın
+X = df.drop(['Item_Outlet_Sales'], axis=1)
+y = df['Item_Outlet_Sales']
+
+# Eğitim ve test veri kümelerini oluşturun
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Verileri ölçeklendirin
+scaler = MinMaxScaler(feature_range=(0, 1))
+x_train_scaled = scaler.fit_transform(x_train)
+x_test_scaled = scaler.transform(x_test)
+
+# K-Nearest Neighbors Regresyon modelini oluşturun
+knn = KNeighborsRegressor()
+
+# Grid Search ile en iyi K değerini bulun
+params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
+grid_search = GridSearchCV(knn, params, cv=5)
+grid_search.fit(x_train_scaled, y_train)
+
+# En iyi K değerini yazdırın
+best_k = grid_search.best_params_['n_neighbors']
+print(f'En iyi K değeri: {best_k}')
+
+# Modeli en iyi K değeriyle tekrar eğitin
+knn = KNeighborsRegressor(n_neighbors=best_k)
+knn.fit(x_train_scaled, y_train)
+
+# Test veri kümesi üzerinde tahminler yapın
+y_pred = knn.predict(x_test_scaled)
